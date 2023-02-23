@@ -1,3 +1,3 @@
 # Scripts
 
-This is daily scripts I use.
+Scripts I have created for work
