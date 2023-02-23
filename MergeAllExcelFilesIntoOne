@@ -1,0 +1,187 @@
+Function RDB_Last(choice As Integer, rng As Range)
+'Ron de Bruin, 5 May 2008
+' 1 = last row
+' 2 = last column
+' 3 = last cell
+    Dim lrw As Long
+    Dim lcol As Integer
+
+    Select Case choice
+
+    Case 1:
+        On Error Resume Next
+        RDB_Last = rng.Find(What:="*", _
+                            after:=rng.Cells(1), _
+                            Lookat:=xlPart, _
+                            LookIn:=xlFormulas, _
+                            SearchOrder:=xlByRows, _
+                            SearchDirection:=xlPrevious, _
+                            MatchCase:=False).Row
+        On Error GoTo 0
+
+    Case 2:
+        On Error Resume Next
+        RDB_Last = rng.Find(What:="*", _
+                            after:=rng.Cells(1), _
+                            Lookat:=xlPart, _
+                            LookIn:=xlFormulas, _
+                            SearchOrder:=xlByColumns, _
+                            SearchDirection:=xlPrevious, _
+                            MatchCase:=False).Column
+        On Error GoTo 0
+
+    Case 3:
+        On Error Resume Next
+        lrw = rng.Find(What:="*", _
+                       after:=rng.Cells(1), _
+                       Lookat:=xlPart, _
+                       LookIn:=xlFormulas, _
+                       SearchOrder:=xlByRows, _
+                       SearchDirection:=xlPrevious, _
+                       MatchCase:=False).Row
+        On Error GoTo 0
+
+        On Error Resume Next
+        lcol = rng.Find(What:="*", _
+                        after:=rng.Cells(1), _
+                        Lookat:=xlPart, _
+                        LookIn:=xlFormulas, _
+                        SearchOrder:=xlByColumns, _
+                        SearchDirection:=xlPrevious, _
+                        MatchCase:=False).Column
+        On Error GoTo 0
+
+        On Error Resume Next
+        RDB_Last = rng.Parent.Cells(lrw, lcol).Address(False, False)
+        If Err.Number > 0 Then
+            RDB_Last = rng.Cells(1).Address(False, False)
+            Err.Clear
+        End If
+        On Error GoTo 0
+
+    End Select
+End Function
+
+Sub Basic_Example_1()
+    Dim MyPath As String, FilesInPath As String
+    Dim MyFiles() As String
+    Dim SourceRcount As Long, Fnum As Long
+    Dim mybook As Workbook, BaseWks As Worksheet
+    Dim sourceRange As Range, destrange As Range
+    Dim rnum As Long, CalcMode As Long
+    
+    Dim FirstCell As String
+
+    'Fill in the path\folder where the files are
+    MyPath = "C:\Users\zdieter\Documents\Scripts\excel script\sysop Folder\Sysops"
+
+    'Add a slash at the end if the user forget it
+    If Right(MyPath, 1) <> "\" Then
+        MyPath = MyPath & "\"
+    End If
+
+    'If there are no Excel files in the folder exit the sub
+    FilesInPath = Dir(MyPath & "*.xl*")
+    If FilesInPath = "" Then
+        MsgBox "No files found"
+        Exit Sub
+    End If
+
+    'Fill the array(myFiles)with the list of Excel files in the folder
+    Fnum = 0
+    Do While FilesInPath <> ""
+        Fnum = Fnum + 1
+        ReDim Preserve MyFiles(1 To Fnum)
+        MyFiles(Fnum) = FilesInPath
+        FilesInPath = Dir()
+    Loop
+
+    'Change ScreenUpdating, Calculation and EnableEvents
+    With Application
+        CalcMode = .Calculation
+        .Calculation = xlCalculationManual
+        .ScreenUpdating = False
+        .EnableEvents = False
+    End With
+
+    'Add a new workbook with one sheet
+    Set BaseWks = Workbooks.Add(xlWBATWorksheet).Worksheets(1)
+    rnum = 1
+
+    'Loop through all files in the array(myFiles)
+    If Fnum > 0 Then
+        For Fnum = LBound(MyFiles) To UBound(MyFiles)
+            Set mybook = Nothing
+            On Error Resume Next
+            Set mybook = Workbooks.Open(MyPath & MyFiles(Fnum))
+            On Error GoTo 0
+
+            If Not mybook Is Nothing Then
+
+                On Error Resume Next
+
+                With mybook.Worksheets(1)
+                    FirstCell = "A1"
+                    Set sourceRange = .Range(FirstCell & ":" & RDB_Last(3, .Cells))
+                    'Test if the row of the last cell >= then the row of the FirstCell
+                    If RDB_Last(1, .Cells) < .Range(FirstCell).Row Then
+                         Set sourceRange = Nothing
+                    End If
+                End With
+
+                If Err.Number > 0 Then
+                    Err.Clear
+                    Set sourceRange = Nothing
+                Else
+                    'if SourceRange use all columns then skip this file
+                    If sourceRange.Columns.Count >= BaseWks.Columns.Count Then
+                        Set sourceRange = Nothing
+                    End If
+                End If
+                On Error GoTo 0
+
+                If Not sourceRange Is Nothing Then
+
+                    SourceRcount = sourceRange.Rows.Count
+
+                    If rnum + SourceRcount >= BaseWks.Rows.Count Then
+                        MsgBox "Sorry there are not enough rows in the sheet"
+                        BaseWks.Columns.AutoFit
+                        mybook.Close savechanges:=False
+                        GoTo ExitTheSub
+                    Else
+
+                        'Copy the file name in column A
+                        With sourceRange
+                            BaseWks.Cells(rnum, "A"). _
+                                    Resize(.Rows.Count).Value = MyFiles(Fnum)
+                        End With
+
+                        'Set the destrange
+                        Set destrange = BaseWks.Range("B" & rnum)
+
+                        'we copy the values from the sourceRange to the destrange
+                        With sourceRange
+                            Set destrange = destrange. _
+                                            Resize(.Rows.Count, .Columns.Count)
+                        End With
+                        destrange.Value = sourceRange.Value
+
+                        rnum = rnum + SourceRcount
+                    End If
+                End If
+                mybook.Close savechanges:=False
+            End If
+
+        Next Fnum
+        BaseWks.Columns.AutoFit
+    End If
+
+ExitTheSub:
+    'Restore ScreenUpdating, Calculation and EnableEvents
+    With Application
+        .ScreenUpdating = True
+        .EnableEvents = True
+        .Calculation = CalcMode
+    End With
+End Sub
