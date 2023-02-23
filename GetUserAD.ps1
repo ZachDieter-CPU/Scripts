@@ -1,4 +1,4 @@
-﻿$List = Get-Content "C:\Users\zdieter\Documents\Scripts\GetMiddleInt\FormattedNames.txt"
+﻿$List = Get-Content ""
 
 
 $UserWriter = "Names`n"
@@ -46,4 +46,4 @@ ForEach($Item in $List){
 
 #Write-Output $UserWriter
 
-$UserWriter | Out-File -FilePath "C:\Users\zdieter\Documents\Scripts\GetMiddleInt\EnabledUser.txt"
+$UserWriter | Out-File -FilePath ""
