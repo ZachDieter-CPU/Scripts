@@ -1,0 +1,3 @@
+(Get-MailboxJunkEmailConfiguration USERNAME@domain.com).BlockedSendersAndDomains
+
+Get-InboxRule -Mailbox USERNAME@domain.com
