@@ -1,4 +1,4 @@
-﻿$List = Get-Content "C:\Users\zdieter\Documents\Scripts\GetManager\EnabledList.txt"
+﻿$List = Get-Content ""
 Connect-AzureAD
 
 
@@ -26,4 +26,4 @@ ForEach($Item in $List){
 
 
 
-#$UserWriter | Out-File -FilePath "C:\Users\zdieter\Documents\Scripts\GetManager\UserWithManger.txt"
+#$UserWriter | Out-File -FilePath ""
